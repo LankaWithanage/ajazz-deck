@@ -1,0 +1,61 @@
+{
+  "brightness": 80,
+  "hold_ms": 700,
+  "home_page": "Media",
+  "pages": [
+    {
+      "name": "Media",
+      "keys": [
+        {"tile": "np_art", "label": "", "action": {"type": "media", "cmd": "playpause"}},
+        {"label": "Prev", "glyph": "prev", "bg": "#1db954", "action": {"type": "media", "cmd": "prev"}},
+        {"label": "Next", "glyph": "next", "bg": "#1db954", "action": {"type": "media", "cmd": "next"}},
+        {"tile": "np_like", "label": "", "action": {"type": "like"},
+         "hold": {"type": "run", "target": "shell:AppsFolder\\SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify"}},
+        {"tile": "np_shuffle", "label": "Shuffle", "action": {"type": "media", "cmd": "shuffle"}},
+        {"tile": "np_repeat", "label": "Repeat", "action": {"type": "media", "cmd": "repeat"}}
+      ]
+    },
+    {
+      "name": "Windows",
+      "keys": [
+        {"label": "Desktop", "glyph": "home", "bg": "#5b5fc7", "action": {"type": "hotkey", "keys": "win+d"}},
+        {"label": "Task Mgr", "glyph": "server", "bg": "#c0392b", "action": {"type": "hotkey", "keys": "ctrl+shift+esc"}},
+        {"label": "Settings", "glyph": "gear", "bg": "#16a085", "action": {"type": "hotkey", "keys": "win+i"}},
+        {"label": "Hold: off", "glyph": "power", "bg": "#7b1f1f", "action": null,
+         "hold": {"type": "sequence", "steps": ["win+x", "pause:400", "u", "u"]}},
+        {"label": "Explorer", "glyph": "folder", "bg": "#d68910", "action": {"type": "hotkey", "keys": "win+e"}},
+        {"label": "Run", "glyph": "search", "bg": "#2e4053", "action": {"type": "hotkey", "keys": "win+r"}}
+      ]
+    },
+    {
+      "name": "Status",
+      "keys": [
+        {"tile": "clock", "label": "", "bg": "#1b2631"},
+        {"tile": "url_status", "label": "GitHub", "url": "https://github.com", "action": {"type": "url", "url": "https://github.com"}},
+        {"label": "Search", "glyph": "globe", "bg": "#2874a6", "action": {"type": "url", "url": "https://duckduckgo.com"}},
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "buttons": [
+    {"name": "left", "action": {"type": "page", "to": "prev"}},
+    {"name": "middle", "action": {"type": "page", "to": "home"}, "hold": {"type": "brightness", "cycle": [20, 50, 80, 100]}},
+    {"name": "right", "action": {"type": "page", "to": "next"}}
+  ],
+  "knobs": [
+    {"name": "small left", "turn": {"type": "volume", "target": "Spotify.exe", "step": 5}, "press": {"type": "media", "cmd": "playpause"}},
+    {"name": "big", "turn": {"type": "volume", "target": "master", "step": 2}, "press": {"type": "mute", "target": "master"}},
+    {"name": "small right", "turn": {"type": "track"}, "press": {"type": "page", "to": "Media"}}
+  ],
+  "spotify": {
+    "client_id": "",
+    "redirect_uri": "http://127.0.0.1:8765/spotify/callback",
+    "playlist_id": "",
+    "playlist_name": "My playlist"
+  },
+  "homelab": {
+    "status_url": ""
+  }
+}

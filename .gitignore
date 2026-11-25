@@ -1,0 +1,7 @@
+# your own settings and uploaded icons stay local
+config.json
+config.json.bak
+icons/
+*.log
+*.bak*
+__pycache__/

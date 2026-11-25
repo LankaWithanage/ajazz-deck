@@ -1,0 +1,9 @@
+hidapi>=0.14
+pillow>=10
+pycaw>=20240316
+comtypes>=1.4
+winrt-Windows.Media.Control
+winrt-Windows.Media
+winrt-Windows.Storage.Streams
+winrt-Windows.Foundation
+winrt-Windows.Foundation.Collections

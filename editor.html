@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck Editor</title>
+<style>
+:root{--bg:#111315;--panel:#1b1e21;--line:#2d3136;--fg:#e8eaed;--mute:#9aa0a6;--acc:#1db954;--sel:#4c8dff;--danger:#e5534b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--danger);display:inline-block}
+.dot.on{background:var(--acc)}
+main{display:flex;gap:16px;padding:16px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:6px 12px;border-radius:16px;cursor:pointer}
+.tab.cur{border-color:var(--acc);color:var(--acc)}
+button{background:#2a2f35;border:1px solid var(--line);color:var(--fg);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+button.pri{background:var(--acc);border-color:var(--acc);color:#04140a;font-weight:600}
+button.del{color:var(--danger)}
+/* deck mockup */
+.deck{background:#e9e9e6;border-radius:14px;padding:22px 22px 26px;width:470px;max-width:100%;position:relative;box-shadow:0 8px 30px #0008}
+.brand{color:#555;text-align:center;letter-spacing:4px;font-size:12px;margin:-8px 0 12px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.keys{display:grid;grid-template-columns:repeat(3,80px);gap:12px}
+.key{width:80px;height:80px;border-radius:8px;border:4px solid #222;background:#000;cursor:pointer;overflow:hidden;padding:0}
+.key img{width:100%;height:100%;display:block}
+.knob{border-radius:50%;background:radial-gradient(circle at 40% 35%,#444,#111 70%);border:3px solid #000;cursor:pointer;color:#bbb;font-size:11px;display:flex;align-items:center;justify-content:center}
+.knob.big{width:130px;height:130px}
+.knob.small{width:62px;height:62px}
+.bottom{display:flex;align-items:center;gap:18px;margin-top:24px}
+.btn{width:46px;height:46px;border-radius:50%;background:#111;border:5px solid #d9d9d5;outline:1px solid #bbb;cursor:pointer}
+.sel{outline:3px solid var(--sel)!important;outline-offset:2px}
+.hint{color:var(--mute);font-size:12px;margin-top:10px}
+/* form */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;flex:1;min-width:300px;max-width:560px}
+.panel h2{font-size:15px;margin:0 0 12px}
+label{display:block;color:var(--mute);font-size:12px;margin:10px 0 4px}
+input,select,textarea{width:100%;background:#0d0f11;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:7px 8px;font:inherit}
+.row{display:flex;gap:8px}.row>*{flex:1}
+fieldset{border:1px solid var(--line);border-radius:8px;margin:12px 0 0;padding:4px 12px 12px}
+legend{color:var(--fg);padding:0 6px}
+.icons{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:150px;overflow:auto}
+.icons img{width:40px;height:40px;border:2px solid transparent;border-radius:6px;cursor:pointer;background:#000}
+.icons img.cur{border-color:var(--sel)}
+.bar{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+#msg{color:var(--acc);font-size:12px;min-height:18px;margin-top:8px}
+@media (max-width:560px){.keys{grid-template-columns:repeat(3,62px)}.key{width:62px;height:62px}.knob.big{width:96px;height:96px}.deck{padding:14px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Deck Editor</h1><span class="dot" id="conn" title="deck connection"></span>
+  <div class="tabs" id="tabs"></div>
+  <button onclick="addPage()">+ Page</button>
+</header>
+<main>
+  <div>
+    <div class="deck">
+      <div class="brand">AJAZZ</div>
+      <div class="top">
+        <div class="keys" id="keys"></div>
+        <div class="knob big" data-ctl="n1">big</div>
+      </div>
+      <div class="bottom">
+        <div class="btn" data-ctl="b0"></div><div class="btn" data-ctl="b1"></div><div class="btn" data-ctl="b2"></div>
+        <div class="knob small" data-ctl="n0">L</div><div class="knob small" data-ctl="n2">R</div>
+      </div>
+    </div>
+    <div class="hint">Click a key, button or knob to edit it. Screen keys belong to the current page; buttons and knobs work on every page.</div>
+  </div>
+  <div class="panel" id="panel"><h2>Select a control</h2></div>
+</main>
+<script>
+let cfg=null, st=null, cur=null, pageIdx=0;
+const ACTIONS={
+  none:[], hotkey:[["keys","Keys, e.g. ctrl+shift+esc or win+d"]],
+  sequence:[["steps","Steps, comma separated, e.g. win+x, pause:400, u, u"]],
+  run:[["target","Program path or shell:AppsFolder\\<AppID>"],["args","Arguments (optional)"]],
+  url:[["url","https://..."]], media:[["cmd","playpause / next / prev / shuffle / repeat"]],
+  page:[["to","next / prev / home / page name"]], brightness:[["cycle","Levels, e.g. 20,50,80,100"]],
+  volume:[["target","master or app exe, e.g. Spotify.exe"],["step","Step % per click"]],
+  mute:[["target","master or app exe"]], track:[], like:[]
+};
+const $=s=>document.querySelector(s);
+async function load(){
+  cfg=await (await fetch('/api/config')).json();
+  st=await (await fetch('/api/state')).json();
+  pageIdx=st.page; draw();
+}
+function draw(){
+  $('#conn').className='dot'+(st.connected?' on':'');
+  $('#tabs').innerHTML=cfg.pages.map((p,i)=>`<button class="tab ${i==pageIdx?'cur':''}" onclick="goPage(${i})">${esc(p.name)}</button>`).join('');
+  $('#keys').innerHTML=[0,1,2,3,4,5].map(i=>`<button class="key" data-ctl="k${i}"><img src="/img/${i}.png?t=${Date.now()}" alt="key ${i+1}"></button>`).join('');
+  document.querySelectorAll('[data-ctl]').forEach(e=>{e.onclick=()=>select(e.dataset.ctl);e.classList.toggle('sel',e.dataset.ctl==cur)});
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+async function goPage(i){pageIdx=i;cur=null;await fetch('/api/page?name='+encodeURIComponent(cfg.pages[i].name));setTimeout(()=>{draw();$('#panel').innerHTML='<h2>Select a control</h2>'},350)}
+function ctlObj(ctl){
+  const k=ctl[0],i=+ctl.slice(1);
+  if(k=='k'){const ks=cfg.pages[pageIdx].keys||(cfg.pages[pageIdx].keys=[]);while(ks.length<6)ks.push(null);if(!ks[i])ks[i]={label:''};return ks[i]}
+  const arr=k=='b'?(cfg.buttons||(cfg.buttons=[])):(cfg.knobs||(cfg.knobs=[]));while(arr.length<3)arr.push({});return arr[i]
+}
+function actForm(name,title,a){
+  a=a||{type:'none'};const t=a.type||'none';
+  let h=`<fieldset><legend>${title}</legend><select data-act="${name}" data-f="type" onchange="chType('${name}',this.value)">${Object.keys(ACTIONS).map(x=>`<option ${x==t?'selected':''}>${x}</option>`).join('')}</select>`;
+  for(const [f,ph] of ACTIONS[t]||[]){let v=a[f];if(Array.isArray(v))v=v.join(', ');h+=`<label>${f}</label><input data-act="${name}" data-f="${f}" value="${esc(v??'')}" placeholder="${esc(ph)}">`}
+  if(t!='none')h+=`<div class="bar"><button onclick="testAct('${name}')">Test now</button></div>`;
+  return h+'</fieldset>';
+}
+function select(ctl){
+  if(cur&&cur!=ctl&&$('#panel [data-act]'))collect();
+  cur=ctl;draw();const o=ctlObj(ctl),k=ctl[0];
+  const names={k:'Screen key '+(+ctl.slice(1)+1)+' · '+cfg.pages[pageIdx].name,b:['Left','Middle','Right'][+ctl[1]]+' button',n:['Small left','Big','Small right'][+ctl[1]]+' knob'};
+  let h=`<h2>${names[k]}</h2>`;
+  if(k=='k'){
+    h+=`<label>Label</label><input id="f_label" value="${esc(o.label)}">
+    <div class="row"><div><label>Live tile</label><select id="f_tile"><option value="">(static)</option>${st.tiles.map(t=>`<option ${o.tile==t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div><label>Glyph</label><select id="f_glyph"><option value="">(none)</option>${st.glyphs.map(g=>`<option ${o.glyph==g?'selected':''}>${g}</option>`).join('')}</select></div></div>
+    <label>URL (for the url_status tile)</label><input id="f_url" value="${esc(o.url)}" placeholder="https://service.example/">
+    <div class="row"><div><label>Background</label><input type="color" id="f_bg" value="${o.bg||'#202020'}"></div><div><label>Text colour</label><input type="color" id="f_fg" value="${o.fg||'#ffffff'}"></div></div>
+    <label>Icon</label><div class="icons" id="icons"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-i="" class="${o.icon?'':'cur'}" title="none">${st.icons.map(i=>`<img src="/icons/${encodeURIComponent(i)}" data-i="${esc(i)}" class="${o.icon==i?'cur':''}" title="${esc(i)}">`).join('')}</div>
+    <label>Upload icon (PNG/JPG)</label><input type="file" id="f_up" accept="image/*">`;
+    h+=actForm('action','Press',o.action)+actForm('hold','Hold (long press)',o.hold);
+  } else if(k=='b'){h+=actForm('action','Press',o.action)+actForm('hold','Hold (long press)',o.hold)}
+  else {h+=actForm('turn','Turn (left/right)',o.turn)+actForm('press','Press',o.press)}
+  h+=`<div class="bar"><button class="pri" onclick="save()">Save to deck</button>${k=='k'?'<button class="del" onclick="clearKey()">Clear key</button>':''}</div>
+  <hr style="border-color:var(--line);margin:16px 0"><div class="row"><div><label>Page name</label><input id="f_pname" value="${esc(cfg.pages[pageIdx].name)}"></div></div>
+  <div class="bar"><button onclick="setHome()">Make home page</button><button class="del" onclick="delPage()">Delete page</button></div><div id="msg"></div>`;
+  $('#panel').innerHTML=h;
+  document.querySelectorAll('#icons img').forEach(im=>im.onclick=()=>{document.querySelectorAll('#icons img').forEach(x=>x.classList.remove('cur'));im.classList.add('cur')});
+  const up=$('#f_up');if(up)up.onchange=async()=>{const f=up.files[0];if(!f)return;const r=await (await fetch('/api/icon?name='+encodeURIComponent(f.name),{method:'POST',body:f})).json();if(r.ok){st.icons.push(r.name);collect();select(cur);msg('Icon uploaded')}else msg(r.error)};
+}
+function chType(name,t){collect();const o=ctlObj(cur);o[name]=t=='none'?null:{type:t};select(cur)}
+function readAct(name){
+  const t=document.querySelector(`[data-act="${name}"][data-f="type"]`);if(!t||t.value=='none')return null;
+  const a={type:t.value};
+  document.querySelectorAll(`[data-act="${name}"]:not([data-f="type"])`).forEach(e=>{let v=e.value.trim();if(!v)return;
+    if(e.dataset.f=='steps')v=v.split(',').map(s=>s.trim()).filter(Boolean);
+    else if(e.dataset.f=='cycle')v=v.split(',').map(Number);
+    else if(e.dataset.f=='step')v=Number(v);
+    a[e.dataset.f]=v});
+  return a;
+}
+function collect(){
+  if(!cur)return;const o=ctlObj(cur),k=cur[0];
+  if(k=='k'){o.label=$('#f_label').value;o.tile=$('#f_tile').value||undefined;o.glyph=$('#f_glyph').value||undefined;o.url=$('#f_url').value.trim()||undefined;
+    o.bg=$('#f_bg').value;o.fg=$('#f_fg').value;const ic=document.querySelector('#icons img.cur');o.icon=ic&&ic.dataset.i||undefined;
+    o.action=readAct('action');o.hold=readAct('hold')||undefined}
+  else if(k=='b'){o.action=readAct('action');o.hold=readAct('hold')||undefined}
+  else {o.turn=readAct('turn');o.press=readAct('press')}
+  const pn=$('#f_pname');if(pn&&pn.value.trim()){const old=cfg.pages[pageIdx].name;cfg.pages[pageIdx].name=pn.value.trim();if(cfg.home_page==old)cfg.home_page=pn.value.trim()}
+}
+async function save(){collect();const r=await (await fetch('/api/config',{method:'POST',body:JSON.stringify(cfg)})).json();msg(r.ok?'Saved — deck updated':'Error: '+r.error);setTimeout(draw,600)}
+async function testAct(name){const a=readAct(name);if(!a)return;if(a.type=='volume'||a.type=='track')a._dir=1;await fetch('/api/test',{method:'POST',body:JSON.stringify(a)});msg('Sent')}
+function clearKey(){const ks=cfg.pages[pageIdx].keys;ks[+cur.slice(1)]=null;cur=null;save();$('#panel').innerHTML='<h2>Select a control</h2>'}
+function addPage(){const n=prompt('New page name');if(!n)return;cfg.pages.push({name:n,keys:[null,null,null,null,null,null]});pageIdx=cfg.pages.length-1;save().then(()=>goPage(pageIdx))}
+function delPage(){if(cfg.pages.length<2)return msg('Need at least one page');if(!confirm('Delete page "'+cfg.pages[pageIdx].name+'"?'))return;cfg.pages.splice(pageIdx,1);pageIdx=0;cur=null;save().then(()=>goPage(0))}
+function setHome(){cfg.home_page=cfg.pages[pageIdx].name;save()}
+function msg(t){const m=$('#msg');if(m)m.textContent=t}
+setInterval(async()=>{st=await (await fetch('/api/state')).json();$('#conn').className='dot'+(st.connected?' on':'');document.querySelectorAll('.key img').forEach((im,i)=>im.src='/img/'+i+'.png?t='+Date.now())},2000);
+load();
+</script>
+</body>
+</html>
